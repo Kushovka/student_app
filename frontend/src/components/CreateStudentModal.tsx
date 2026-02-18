@@ -29,7 +29,7 @@ const CreateStudentModal = ({
         {/* HEADER */}
         <div className="flex items-center justify-between">
           <p className="text-[18px] font-semibold text-slate-900">
-            Создать нового пользователя
+            Добавить ученика
           </p>
           <button
             onClick={() => setOpenCreateModal(false)}
@@ -104,7 +104,7 @@ const CreateStudentModal = ({
                   email: e.target.value,
                 }))
               }
-              placeholder="example@mail.com"
+              placeholder="Введите почту родителя"
               className="border border-gray-300 rounded-lg px-3 py-[9px] text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
             />
           </div>
@@ -155,7 +155,7 @@ const CreateStudentModal = ({
           type="button"
           className="px-4 py-2 rounded-lg bg-cyan-500 text-white text-sm font-medium hover:bg-cyan-600 transition w-full active:scale-[0.98]"
         >
-          Создать пользователя
+          Добавить
         </button>
       </motion.div>
     </div>

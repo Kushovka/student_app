@@ -1,21 +1,74 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { IoClose } from "react-icons/io5";
-import { getStudentById, notifyStudent } from "../api/student";
+import {
+  addBehavior,
+  getBehaviorHistory,
+  getStudentById,
+} from "../api/student";
+import type { BehaviorRecord } from "../types/behavior.types";
 import type { StudentResponce } from "../types/student.type";
+import Toast from "./Toast";
 
 interface Props {
   studentId: string;
   onClose: () => void;
 }
 
+const subjects = [
+  "Русский язык",
+  "Литература",
+  "Математика",
+  "Алгебра",
+  "Геометрия",
+  "Информатика",
+  "Физика",
+  "Химия",
+  "Биология",
+  "История",
+  "Обществознание",
+  "География",
+  "Английский язык",
+  "Немецкий язык",
+  "Французский язык",
+  "ОБЖ",
+  "Физкультура",
+  "Технология",
+  "Музыка",
+  "ИЗО",
+];
+
+const reasons = [
+  "Не сделал домашнее задание",
+  "Забыл тетрадь",
+  "Забыл учебник",
+  "Не готов к уроку",
+  "Опоздал на урок",
+  "Пропуск урока без уважительной причины",
+  "Разговаривал на уроке",
+  "Мешал вести урок",
+  "Нарушал дисциплину",
+  "Пользовался телефоном на уроке",
+  "Списывал",
+  "Грубил учителю",
+  "Конфликтовал с одноклассниками",
+  "Портил школьное имущество",
+  "Нарушение формы одежды",
+  "Не сдал контрольную работу",
+  "Не сдал проект вовремя",
+  "Отказался выполнять задание",
+];
+
 const StudentModal = ({ studentId, onClose }: Props) => {
   const [student, setStudent] = useState<StudentResponce | null>(null);
 
   const [subject, setSubject] = useState("");
-  const [reason, setReason] = useState("");
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
+  const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [history, setHistory] = useState<BehaviorRecord[]>([]);
+  const [notify, setNotify] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStudent = async () => {
@@ -27,24 +80,40 @@ const StudentModal = ({ studentId, onClose }: Props) => {
   }, [studentId]);
 
   const handleSend = async () => {
+    if (!student) return;
+
     try {
       setLoading(true);
 
-      await notifyStudent(student.id, {
+      await addBehavior(student.id, {
         subject,
-        message: reason,
+        reasons: selectedReasons,
+        comment: comment || undefined,
       });
 
-      setSuccess(true);
+      const updatedHistory = await getBehaviorHistory(student.id);
+      setHistory(updatedHistory);
+
+      setNotify("Уведомление отправлено");
+
       setSubject("");
-      setReason("");
-    } catch (err) {
-      console.error(err);
-      alert("Ошибка отправки");
+      setSelectedReasons([]);
+      setComment("");
+    } catch {
+      setError("Ошибка отправки!");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      const data = await getBehaviorHistory(studentId);
+      setHistory(data);
+    };
+
+    fetchHistory();
+  }, []);
 
   if (!student) {
     return (
@@ -59,6 +128,12 @@ const StudentModal = ({ studentId, onClose }: Props) => {
       onClick={onClose}
       className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
     >
+      {error && (
+        <Toast type="error" message={error} onClose={() => setError(null)} />
+      )}
+      {notify && (
+        <Toast type="access" message={notify} onClose={() => setNotify(null)} />
+      )}
       <motion.div
         onClick={(e) => e.stopPropagation()}
         initial={{ opacity: 0, scale: 0.96 }}
@@ -99,34 +174,78 @@ const StudentModal = ({ studentId, onClose }: Props) => {
             className="border rounded-lg px-3 py-2 text-sm"
           >
             <option value="">Выберите предмет</option>
-            <option value="Математика">Математика</option>
-            <option value="Русский язык">Русский язык</option>
-            <option value="История">История</option>
+            {subjects.map((sub) => (
+              <div key={sub}>
+                <option value={sub}>{sub}</option>
+              </div>
+            ))}
           </select>
 
           {/* Причина */}
-          <select
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            className="border rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="">Выберите причину</option>
-            <option value="Плохое поведение">Плохое поведение</option>
-            <option value="Забыл тетрадь">Забыл тетрадь</option>
-            <option value="Не сделал домашку">Не сделал домашку</option>
-          </select>
+          <div className="flex flex-col gap-2 max-h-40 overflow-y-auto border rounded-lg p-3">
+            {reasons.map((reas) => (
+              <label key={reas} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedReasons.includes(reas)}
+                  onChange={() => {
+                    setSelectedReasons((prev) =>
+                      prev.includes(reas)
+                        ? prev.filter((r) => r !== reas)
+                        : [...prev, reas],
+                    );
+                  }}
+                />
+                {reas}
+              </label>
+            ))}
+          </div>
+
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Дополнительный комментарий..."
+            className="border rounded-lg px-3 py-2 text-sm resize-none"
+            rows={3}
+          />
 
           <button
-            disabled={!subject || !reason || loading}
+            disabled={!subject || !selectedReasons || loading}
             onClick={handleSend}
             className="bg-red-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-red-600 disabled:opacity-50 transition"
           >
             {loading ? "Отправка..." : "Отправить"}
           </button>
+        </div>
 
-          {success && (
-            <p className="text-green-600 text-xs">Уведомление отправлено</p>
+        <div className="border-t pt-4 space-y-3 max-h-40 overflow-y-auto">
+          <h4 className="text-sm font-semibold">История замечаний</h4>
+
+          {history.length === 0 && (
+            <p className="text-xs text-zinc-500">Пока нет замечаний</p>
           )}
+
+          {history.map((item) => (
+            <div key={item.id} className="bg-gray-50 p-3 rounded-lg text-xs">
+              <p className="font-medium">{item.subject}</p>
+
+              <ul className="list-disc pl-4">
+                {item.reasons.map((r, index) => (
+                  <li key={index}>{r}</li>
+                ))}
+              </ul>
+
+              {item.comment && (
+                <p className="mt-1 text-zinc-600">
+                  Комментарий: {item.comment}
+                </p>
+              )}
+
+              <p className="text-zinc-400 mt-1">
+                {new Date(item.created_at).toLocaleDateString("ru-RU")}
+              </p>
+            </div>
+          ))}
         </div>
       </motion.div>
     </div>

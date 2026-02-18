@@ -1,5 +1,6 @@
 import axios from "axios";
-import type { NotifyPayload, StudentResponce } from "../types/student.type";
+import type { BehaviorCreate } from "../types/behavior.types";
+import type { StudentResponce } from "../types/student.type";
 
 const api = axios.create({
   baseURL: "http://localhost:8001/",
@@ -38,11 +39,15 @@ export const getStudentById = async (
   return data;
 };
 
-export const notifyStudent = async (
+export const addBehavior = async (
   studentId: string,
-  payload: NotifyPayload,
+  payload: BehaviorCreate,
 ) => {
-  const { data } = await api.post(`student/${studentId}/notify`, payload);
+  const { data } = await api.post(`/behavior/${studentId}`, payload);
+  return data;
+};
 
+export const getBehaviorHistory = async (studentId: string) => {
+  const { data } = await api.get(`/behavior/${studentId}`);
   return data;
 };

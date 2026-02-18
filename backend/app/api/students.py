@@ -1,6 +1,3 @@
-import os
-import smtplib
-from email.message import EmailMessage
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -74,34 +71,3 @@ def delete_student(student_id: str, db: Session = Depends(get_db)):
 
     db.delete(student)
     db.commit()
-
-
-@router.post("/{student_id}/notify")
-def notify_student(
-    student_id: str, payload: NotificationRequests, db: Session = Depends(get_db)
-):
-    student = db.query(Student).filter(Student.id == student_id).first()
-
-    if not student:
-        raise HTTPException(status_code=404, detail="Student is not found")
-
-    email = EmailMessage()
-    email["From"] = os.getenv("SMTP_USER")
-    email["To"] = student.email
-    email["Subject"] = payload.subject
-
-    email.set_content(
-        f"""
-Ученик: {student.last_name} {student.first_name}
-Класс: {student.grade}{student.class_letter}
-
-Сообщение:
-{payload.message}
-"""
-    )
-
-    with smtplib.SMTP_SSL("smtp.yandex.ru", 465) as smtp:
-        smtp.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"))
-        smtp.send_message(email)
-
-    return {"status": "Email sent"}
